@@ -23,6 +23,7 @@ void DrawCubeTextureRec(Texture2D texture, Rectangle source, Vector3 position, f
 #include <vector>
 #include <map>
 
+
 // DEFINES
 #define DELIMITER ';'
 #define FORMAT "BOS"
@@ -35,6 +36,116 @@ void DrawCubeTextureRec(Texture2D texture, Rectangle source, Vector3 position, f
 #define COLLISIONS "COLLISIONS"
 #define OBJECTS "OBJECTS"
 #define NO_TEXTURE '0'
+#define MAP_MAP_DEPHT 1.0f
+#define FLOOR_MAP_DEPHT 0.0f
+
+class Player {
+public:
+	Vector3 position{ 0,0,0 };
+	Color c = RED;
+	float r = 0.5f;
+
+	void Movement(char**& collisions_map, int BallPosX, int BallPosY, Player& ball) {
+
+
+
+		if (IsKeyPressed(KEY_W)) {
+			if (collisions_map[BallPosX - 1][BallPosY] == '0') ball.position.z -= 1.0f;
+		}
+		else if (IsKeyPressed(KEY_S)) {
+
+			if (collisions_map[BallPosX + 1][BallPosY] == '0') ball.position.z += 1.0f;
+		}
+		else if (IsKeyPressed(KEY_A)) {
+
+			if (collisions_map[BallPosX][BallPosY - 1] == '0') ball.position.x -= 1.0f;
+		}
+		else if (IsKeyPressed(KEY_D)) {
+
+			if (collisions_map[BallPosX][BallPosY + 1] == '0') ball.position.x += 1.0f;
+		}
+
+	}
+
+
+
+	void RENDER() {
+		DrawSphere(position, r, c);
+	}
+
+};
+
+
+#define BOMB_MAX_TIME 2.0f
+class Bomb {
+public:
+	float x = 0;
+	float y = 0;
+	float r = 0.25;
+	float timer = 0;
+
+	bool Exists = false;
+
+	Color color = BLACK;
+
+	virtual void passTime() {
+		timer += 0.5;
+	}
+	
+
+	virtual void explode(int offsetX, int offsetZ, char** collisions_map, char** map_map, int levelW, int levelH) {
+
+		int PosX = x - offsetX;
+		int PosY = y - offsetZ;
+
+		if (PosX < levelW && PosX > 0) {
+			if (collisions_map[PosX + 1][PosY] == 'D') {
+
+				collisions_map[PosX + 1][PosY] == '0';
+				map_map[PosX + 1][PosY] == '0';
+			}
+			if (collisions_map[PosX - 1][PosY] == 'D') {
+
+				collisions_map[PosX - 1][PosY] == '0';
+				map_map[PosX - 1][PosY] == '0';
+			}
+		}
+
+		if (PosY < levelW && PosY > 0) {
+			if (collisions_map[PosX][PosY + 1] == 'D') {
+
+				collisions_map[PosX][PosY + 1] == '0';
+				map_map[PosX][PosY + 1] == '0';
+			}
+			if (collisions_map[PosX][PosY - 1] == 'D') {
+
+				collisions_map[PosX][PosY - 1] == '0';
+				map_map[PosX][PosY - 1] == '0';
+			}
+		}
+
+		std::cout << "BOOM";
+	}
+
+	virtual void Update(int X, int Y, char** collisions_map, char** map_map, int levelW, int levelH) {
+
+		passTime();
+
+		if (timer >= BOMB_MAX_TIME) {
+			timer = 0;
+
+			explode(X, Y, collisions_map, map_map, levelW, levelH);
+
+			Exists = false;
+		}
+
+
+	}
+
+};
+
+std::vector<Bomb> BombsInMap;
+
 
 // GLOBALS FOR STORAGE
 std::string Version;
@@ -288,6 +399,7 @@ void DrawMapMap(std::map<char, Texture2D>& textures_loaded, char**& _map, int le
 }
 
 
+
 int main(void)
 {
 	// LECTOR DE NIVELES BombOS
@@ -298,10 +410,9 @@ int main(void)
     //--------------------------------------------------------------------------------------
     const int screenWidth = 800;
     const int screenHeight = 450;
+	std::string t = "BomBOs: " + Title;
 
-
-    InitWindow(screenWidth, screenHeight, "raylib [models] example - cubicmap rendering");
-
+    InitWindow(screenWidth, screenHeight, t.c_str());
 
     // Define the camera to look into our 3d world
     Camera camera = { 0 };
@@ -310,8 +421,6 @@ int main(void)
     camera.up = { 0.0f, 1.0f, 0.0f };              // Camera up vector (rotation towards target)
     camera.fovy = 45.0f;                                    // Camera field-of-view Y
     camera.projection = CAMERA_PERSPECTIVE;                 // Camera projection type
-
-	CheckCollisionBoxes((BoundingBox)Vector3 {}, (BoundingBox)Vector3 {});
 
 	// LOAD TEXTURES
 	for (auto const& it : textures_files) {
@@ -327,13 +436,6 @@ int main(void)
 	}
 
     Vector3 mapPosition = { -16.0f, 0.0f, -8.0f };          // Set model position
-
-
-	bool pause = false;     // Pause camera orbital rotation (and zoom)
-
-
-
-	bool characterReceived = false;
 
 
 	SetTargetFPS(60);                   // Set our game to run at 60 frames-per-second
@@ -352,14 +454,17 @@ int main(void)
 	}
 
 
-	Vector3 ballPosition = { 0 + offsetX, 0,  0 + offsetZ };
+
+	Player ball;
+	ball.position = { 0, 0, 0 };
+
 	bool Spawned = false;
 	// SPAWN CHARACTER
 	for (int i = 0; i < level_h; i++)
 	{
 		for (int j = 0; j < level_w; j++) {
 			if (objetcs_map[j][i] == '1') {
-				ballPosition = { i + offsetX, 0, j + offsetZ };
+				ball.position = { i + offsetX, 1, j + offsetZ };
 			}
 
 		}
@@ -372,58 +477,61 @@ int main(void)
 
 		// Update
 		//----------------------------------------------------------------------------------
-		if (IsKeyPressed(KEY_P)) pause = !pause;
 
 
 
+		// BALL POSITION INSIDE ARRAY 
+		int BallPosX = ball.position.z - offsetX;
+		int BallPosY = ball.position.x - offsetZ;
 
-		//----------------------------------------------------------------------------------
-
-
-
-
-
-
+		int BombPosX;
+		int BombPosY;
 
 		// Draw
 		//----------------------------------------------------------------------------------
-		
-		
-		
-		
-		
-		
-		
-		
+
 		BeginDrawing();
 
-			ClearBackground(RAYWHITE);
+			ClearBackground(WHITE);
 
 			BeginMode3D(camera);
 
 			// DRAW FLOOR MAP
-			DrawFloorMap(textures_loaded, floor_map, level_h, level_w, 0.0f, offsetX, offsetZ);
+			DrawFloorMap(textures_loaded, floor_map, level_h, level_w, FLOOR_MAP_DEPHT, offsetX, offsetZ);
 
 			// DRAW MAP MAP
-			DrawMapMap (textures_loaded, map_map, level_h, level_w, 1.0f, offsetX, offsetZ);
+			DrawMapMap(textures_loaded, map_map, level_h, level_w, MAP_MAP_DEPHT, offsetX, offsetZ);
+
+			// BALL MOVEMENT
+			ball.Movement(collisions_map, BallPosX, BallPosY, ball);
+
+
+			if (IsKeyPressed(KEY_SPACE)) {
+				// INITALIZE BOMB
+				
+				Bomb bomb;
+				bomb.x = ball.position.x;
+				bomb.y = ball.position.z;
+
+				bomb.Exists = true;
+
+				BombsInMap.push_back(bomb);
+
+			}
 
 
 
-			if (IsKeyPressed(KEY_W)) {
-				ballPosition.z -= 1.0f;
-				GetKeyPressed();
+			for (int i = 0; i < BombsInMap.size(); i++)
+			{
+				
+				BombsInMap[i].Update(offsetX, offsetZ, collisions_map, map_map, level_w, level_h);
+
+				DrawSphere({ BombsInMap[i].x, 1.0f, BombsInMap[i].y }, BombsInMap[i].r, BombsInMap[i].color);
+
 			}
-			else if (IsKeyPressed(KEY_S)) {
-				ballPosition.z += 1.0f;
-			}
-			else if (IsKeyPressed(KEY_A)) {
-				ballPosition.x -= 1.0f;
-			}
-			else if (IsKeyPressed(KEY_D)) {
-				ballPosition.x += 1.0f;
-			}
-	
-			DrawSphere(ballPosition, 1.0f, RED);
+
+			// DRAW BALL
+			ball.RENDER();
 
 
 			DrawGrid(10, 1.0f);        // Draw a grid
@@ -432,7 +540,10 @@ int main(void)
 
 			DrawFPS(10, 10);
 
+			DrawText(Title.c_str(), 64, 64, 32, DARKGRAY);
+
 		EndDrawing();
+
 		//----------------------------------------------------------------------------------
 	}
 
