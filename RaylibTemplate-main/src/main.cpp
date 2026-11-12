@@ -2,11 +2,8 @@
 Raylib example file.
 This is an example main file for a simple raylib project.
 Use this as a starting point or replace it with your code.
-
 by Jeffery Myers is marked with CC0 1.0. To view a copy of this license, visit https://creativecommons.org/publicdomain/zero/1.0/
-
 */
-
 
 #include "raylib.h"
 
@@ -27,7 +24,7 @@ void DrawCubeTextureRec(Texture2D texture, Rectangle source, Vector3 position, f
 // DEFINES
 #define DELIMITER ';'
 #define FORMAT "BOS"
-#define VERSION "0.5"
+#define MIN_VERSION "0.5"
 #define TITLE "TITLE"
 #define TEXTURES "TEXTURES"
 #define SIZE "SIZE"
@@ -35,6 +32,7 @@ void DrawCubeTextureRec(Texture2D texture, Rectangle source, Vector3 position, f
 #define MAP "MAP"
 #define COLLISIONS "COLLISIONS"
 #define OBJECTS "OBJECTS"
+#define MUSIC "MUSIC"
 #define NO_TEXTURE '0'
 #define MAP_MAP_DEPHT 1.0f
 #define FLOOR_MAP_DEPHT 0.0f
@@ -63,13 +61,9 @@ public:
 		}
 
 	}
-
-
-
 	void RENDER() {
 		DrawSphere(position, r, c);
 	}
-
 };
 
 /*
@@ -111,11 +105,13 @@ std::string Title;
 std::string TexturesAmount;
 int TexturesAmountINT;
 
+// MUSIC SRC
+std::string backgroundMusicSRC;
+
 // TEXTURAS
 std::map<char, std::string> textures_files;
 
 std::map<char, Texture2D> textures_loaded;
-
 
 // LEVEL SIZE
 int level_w = 0;
@@ -139,6 +135,7 @@ void HeaderCheck(std::fstream& Level, std::string Reader, char Delimiter, std::s
 	}
 	std::cout << Reader << std::endl;
 }
+
 
 // READ ALL TEXTURES
 void CreateTexturesArray(std::fstream& Level, std::map<char, std::string>& textures_files, int& TexturesAmountINT,std::string ReaderTMP, char Delimiter) {
@@ -181,7 +178,6 @@ void FillCharPntrPntrArray(std::fstream& Level, std::string ReaderTMP, char**& A
 	}
 }
 
-
 void PrintArray(char**& ARRAY, int levelH, int levelW) {
 	for (int i = 0; i < levelH; i++)
 	{
@@ -212,8 +208,15 @@ int READER()
 	// READ FILE HEADER FOR FORMAT
 	HeaderCheck(Level, tmp, DELIMITER, FORMAT, "Error 2: Wrong Format", 2);
 
-	// WHEN HEADER IS CORRECT, READ VERSION
-	HeaderCheck(Level, Version, DELIMITER, VERSION, "Error 3: Wrong Version", 3);
+	// Version CHECK
+	getline(Level, Version, DELIMITER);
+	if (Version <= " ") {
+		std::cout << "Error 3: Wrong Version";
+		Level.close();
+		return 3;
+	}
+	std::cout << Version << std::endl;
+
 
 	// JUMP TO THE START OF NEXT LINE READING ";"
 	getline(Level, tmp);
@@ -330,6 +333,19 @@ int READER()
 
 	//PRINT char**
 	PrintArray(objetcs_map, level_h, level_w);
+	
+	if (Version == "0.6") {
+		//READ MUSIC HEADER
+		HeaderCheck(Level, tmp, DELIMITER, MUSIC, "Error 13 = MUSIC Missindicated", 13);
+		// JUMP TO THE START OF NEXT LINE
+		getline(Level, tmp, DELIMITER);
+		backgroundMusicSRC = tmp;
+		std::cout << backgroundMusicSRC << std::endl;
+		if (backgroundMusicSRC == "") {
+			std::cout << "Error 14 = Music is empty";
+			return 14;
+		}
+	}
 
 	Level.close(); // CLOSE OPENNED FILE
 	return 0;
@@ -354,24 +370,6 @@ void DrawMapMap(std::map<char, Texture2D>& textures_loaded, char**& _map, int le
 				DrawCubeTexture(textures_loaded[_map[j][i]], { (float)i + offsetX, Depht, (float)j + offsetZ }, 1.0f, 1.0f, 1.0f, WHITE);
 		}
 	}
-}
-
-
-void CheckDestructible(char** collisionmap,int PosX, int PosY) {
-	
-	if (collisionmap[PosX+1][PosY] == 'D') {
-
-	}
-	if (collisionmap[PosX-1][PosY] == 'D') {
-
-	}
-	if (collisionmap[PosX][PosY+1] == 'D') {
-
-	}
-	if (collisionmap[PosX][PosY-1] == 'D') {
-
-	}
-
 }
 
 
@@ -411,6 +409,13 @@ int main(void)
 		textures_loaded.insert({ it.first, tmpTEXTURE2D });
 	}
 
+	Sound bgMusic;
+	if (Version == "0.6") {
+		bgMusic = LoadSound(backgroundMusicSRC.c_str());
+	}
+
+
+
 	Vector3 mapPosition = { -16.0f, 0.0f, -8.0f };          // Set model position
 
 
@@ -447,7 +452,7 @@ int main(void)
 	}
 
 
-
+	// BOMB, CAN SCALATE TO CLASS
 	Vector3 BombPosition;
 	BombPosition.x = 0;
 	BombPosition.y = 1.0f;
@@ -460,22 +465,26 @@ int main(void)
 	int BombMapPosX;
 	int BombMapPosY;
 
+
+	// 0.6
+	//---------------------------------------------------------------------------------
+	if (Version == "0.6") {
+		PlaySound(bgMusic);
+	}
+	//---------------------------------------------------------------------------------
+
+
+
+
+
 	// UPDATE
 	// Main game loop
 	while (!WindowShouldClose())        // Detect window close button or ESC key
 	{
-
-		// Update
 		//----------------------------------------------------------------------------------
-
-
-
 		// BALL POSITION INSIDE ARRAY 
 		int BallMapPosX = ball.position.z - offsetX;
 		int BallMapPosY = ball.position.x - offsetZ;
-
-		
-
 
 		// Draw
 		//----------------------------------------------------------------------------------
@@ -495,35 +504,63 @@ int main(void)
 		// BALL MOVEMENT
 		ball.Movement(collisions_map, BallMapPosX, BallMapPosY, ball);
 
-
+		// BOMB LOGIC, CAN SCALATE TO INDIVIDUAL FUNCTIONS
 		if (IsKeyPressed(KEY_SPACE) && bombTimer == 0) {
 			BombPlaced = true;
 			BombPosition = ball.position;
-			BombMapPosX = BombPosition.x - offsetX;
-			BombMapPosY = BombPosition.z - offsetZ;
-
+			BombMapPosX = BombPosition.z - offsetX;
+			BombMapPosY = BombPosition.x - offsetZ;
 		}
 		if (BombPlaced)
 		{
-			bombTimer+= 0.1f;
+			bombTimer += 0.1f;
 			std::cout << bombTimer << std::endl;
 			if (bombTimer < 10) {
-				DrawSphere(BombPosition, ball.r/2, DARKGRAY);
+				DrawSphere(BombPosition, ball.r / 2, DARKGRAY);
 			}
 			if (bombTimer >= bombTimerMax) {
 				BombPlaced = false;
 				bombTimer = 0;
-				std::cout << collisions_map[BombMapPosX][BombMapPosY];
+				// CHECK IN CROSS FOR DESTRUCTIBLE
+				if (collisions_map[BombMapPosX + 1][BombMapPosY] == 'D') {
+
+					collisions_map[BombMapPosX + 1][BombMapPosY] = '0';
+					map_map[BombMapPosX + 1][BombMapPosY] = '0';
+				}
+				if (collisions_map[BombMapPosX - 1][BombMapPosY] == 'D') {
+
+					collisions_map[BombMapPosX - 1][BombMapPosY] = '0';
+					map_map[BombMapPosX - 1][BombMapPosY] = '0';
+
+				}
+				if (collisions_map[BombMapPosX][BombMapPosY + 1] == 'D') {
+
+					collisions_map[BombMapPosX][BombMapPosY + 1] = '0';
+					map_map[BombMapPosX][BombMapPosY + 1] = '0';
+
+				}
+				if (collisions_map[BombMapPosX][BombMapPosY - 1] == 'D') {
+					collisions_map[BombMapPosX][BombMapPosY - 1] = '0';
+					map_map[BombMapPosX][BombMapPosY - 1] = '0';
+				}
 
 			}
 		}
-
-
 
 			// DRAW BALL
 			ball.RENDER();
 
 
+			// 0.6
+			//---------------------------------------------------------------------------------
+			if (Version == "0.6"){
+				std::cout << backgroundMusicSRC;
+				PlaySound(bgMusic);
+				if (!IsSoundPlaying(bgMusic)) PlaySound(bgMusic);
+			}
+			//---------------------------------------------------------------------------------
+			
+			
 			DrawGrid(10, 1.0f);        // Draw a grid
 
 			EndMode3D();
