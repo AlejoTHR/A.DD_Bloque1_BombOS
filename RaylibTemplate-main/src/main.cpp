@@ -46,9 +46,6 @@ public:
 	float r = 0.5f;
 
 	void Movement(char**& collisions_map, int BallPosX, int BallPosY, Player& ball) {
-
-
-
 		if (IsKeyPressed(KEY_W)) {
 			if (collisions_map[BallPosX - 1][BallPosY] == '0') ball.position.z -= 1.0f;
 		}
@@ -75,7 +72,7 @@ public:
 
 };
 
-
+/*
 #define BOMB_MAX_TIME 2.0f
 class Bomb {
 public:
@@ -95,57 +92,18 @@ public:
 
 	virtual void explode(int offsetX, int offsetZ, char** collisions_map, char** map_map, int levelW, int levelH) {
 
-		int PosX = x - offsetX;
-		int PosY = y - offsetZ;
-
-		if (PosX < levelW && PosX > 0) {
-			if (collisions_map[PosX + 1][PosY] == 'D') {
-
-				collisions_map[PosX + 1][PosY] == '0';
-				map_map[PosX + 1][PosY] == '0';
-			}
-			if (collisions_map[PosX - 1][PosY] == 'D') {
-
-				collisions_map[PosX - 1][PosY] == '0';
-				map_map[PosX - 1][PosY] == '0';
-			}
-		}
-
-		if (PosY < levelW && PosY > 0) {
-			if (collisions_map[PosX][PosY + 1] == 'D') {
-
-				collisions_map[PosX][PosY + 1] == '0';
-				map_map[PosX][PosY + 1] == '0';
-			}
-			if (collisions_map[PosX][PosY - 1] == 'D') {
-
-				collisions_map[PosX][PosY - 1] == '0';
-				map_map[PosX][PosY - 1] == '0';
-			}
-		}
-
-		std::cout << "BOOM";
 	}
 
 	virtual void Update(int X, int Y, char** collisions_map, char** map_map, int levelW, int levelH) {
 
-		passTime();
-
-		if (timer >= BOMB_MAX_TIME) {
-			timer = 0;
-
-			explode(X, Y, collisions_map, map_map, levelW, levelH);
-
-			Exists = false;
-		}
 
 
 	}
 
 };
-
+// VECTOR FOR BOMBS IN MAP
 std::vector<Bomb> BombsInMap;
-
+*/
 
 // GLOBALS FOR STORAGE
 std::string Version;
@@ -399,6 +357,24 @@ void DrawMapMap(std::map<char, Texture2D>& textures_loaded, char**& _map, int le
 }
 
 
+void CheckDestructible(char** collisionmap,int PosX, int PosY) {
+	
+	if (collisionmap[PosX+1][PosY] == 'D') {
+
+	}
+	if (collisionmap[PosX-1][PosY] == 'D') {
+
+	}
+	if (collisionmap[PosX][PosY+1] == 'D') {
+
+	}
+	if (collisionmap[PosX][PosY-1] == 'D') {
+
+	}
+
+}
+
+
 
 int main(void)
 {
@@ -429,19 +405,19 @@ int main(void)
 		const char* tmpSRC = tmpName.c_str();
 
 		Image tmpIMAGE = LoadImage(tmpSRC);
-		
+
 		Texture2D tmpTEXTURE2D = LoadTextureFromImage(tmpIMAGE);
 
-		textures_loaded.insert({ it.first, tmpTEXTURE2D});
+		textures_loaded.insert({ it.first, tmpTEXTURE2D });
 	}
 
-    Vector3 mapPosition = { -16.0f, 0.0f, -8.0f };          // Set model position
+	Vector3 mapPosition = { -16.0f, 0.0f, -8.0f };          // Set model position
 
 
 	SetTargetFPS(60);                   // Set our game to run at 60 frames-per-second
 	//--------------------------------------------------------------------------------------
-	
-	
+
+
 	// START
 	float offsetX = -level_w / 2;
 	if (level_w % 2 == 0) {
@@ -470,6 +446,20 @@ int main(void)
 		}
 	}
 
+
+
+	Vector3 BombPosition;
+	BombPosition.x = 0;
+	BombPosition.y = 1.0f;
+	BombPosition.z = 0;
+	bool BombPlaced = false;
+	bool PlayerPostaken = false;
+	float bombTimer = 0;
+	float bombTimerMax = 5;
+	// BOMB POSITION INSIDE ARRAY 
+	int BombMapPosX;
+	int BombMapPosY;
+
 	// UPDATE
 	// Main game loop
 	while (!WindowShouldClose())        // Detect window close button or ESC key
@@ -481,54 +471,54 @@ int main(void)
 
 
 		// BALL POSITION INSIDE ARRAY 
-		int BallPosX = ball.position.z - offsetX;
-		int BallPosY = ball.position.x - offsetZ;
+		int BallMapPosX = ball.position.z - offsetX;
+		int BallMapPosY = ball.position.x - offsetZ;
 
-		int BombPosX;
-		int BombPosY;
+		
+
 
 		// Draw
 		//----------------------------------------------------------------------------------
 
 		BeginDrawing();
 
-			ClearBackground(WHITE);
+		ClearBackground(WHITE);
 
-			BeginMode3D(camera);
+		BeginMode3D(camera);
 
-			// DRAW FLOOR MAP
-			DrawFloorMap(textures_loaded, floor_map, level_h, level_w, FLOOR_MAP_DEPHT, offsetX, offsetZ);
+		// DRAW FLOOR MAP
+		DrawFloorMap(textures_loaded, floor_map, level_h, level_w, FLOOR_MAP_DEPHT, offsetX, offsetZ);
 
-			// DRAW MAP MAP
-			DrawMapMap(textures_loaded, map_map, level_h, level_w, MAP_MAP_DEPHT, offsetX, offsetZ);
+		// DRAW MAP MAP
+		DrawMapMap(textures_loaded, map_map, level_h, level_w, MAP_MAP_DEPHT, offsetX, offsetZ);
 
-			// BALL MOVEMENT
-			ball.Movement(collisions_map, BallPosX, BallPosY, ball);
+		// BALL MOVEMENT
+		ball.Movement(collisions_map, BallMapPosX, BallMapPosY, ball);
 
 
-			if (IsKeyPressed(KEY_SPACE)) {
-				// INITALIZE BOMB
-				
-				Bomb bomb;
-				bomb.x = ball.position.x;
-				bomb.y = ball.position.z;
+		if (IsKeyPressed(KEY_SPACE) && bombTimer == 0) {
+			BombPlaced = true;
+			BombPosition = ball.position;
+			BombMapPosX = BombPosition.x - offsetX;
+			BombMapPosY = BombPosition.z - offsetZ;
 
-				bomb.Exists = true;
-
-				BombsInMap.push_back(bomb);
+		}
+		if (BombPlaced)
+		{
+			bombTimer+= 0.1f;
+			std::cout << bombTimer << std::endl;
+			if (bombTimer < 10) {
+				DrawSphere(BombPosition, ball.r/2, DARKGRAY);
+			}
+			if (bombTimer >= bombTimerMax) {
+				BombPlaced = false;
+				bombTimer = 0;
+				std::cout << collisions_map[BombMapPosX][BombMapPosY];
 
 			}
+		}
 
 
-
-			for (int i = 0; i < BombsInMap.size(); i++)
-			{
-				
-				BombsInMap[i].Update(offsetX, offsetZ, collisions_map, map_map, level_w, level_h);
-
-				DrawSphere({ BombsInMap[i].x, 1.0f, BombsInMap[i].y }, BombsInMap[i].r, BombsInMap[i].color);
-
-			}
 
 			// DRAW BALL
 			ball.RENDER();
