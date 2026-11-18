@@ -379,7 +379,6 @@ int main(void)
 	// LECTOR DE NIVELES BombOS
 	READER();
 
-
     // Initialization
     //--------------------------------------------------------------------------------------
     const int screenWidth = 800;
@@ -399,7 +398,7 @@ int main(void)
 	// LOAD TEXTURES
 	for (auto const& it : textures_files) {
 
-		std::string tmpName = "resources/" + it.second;
+		std::string tmpName = "resources/textures" + it.second;
 		const char* tmpSRC = tmpName.c_str();
 
 		Image tmpIMAGE = LoadImage(tmpSRC);
@@ -410,10 +409,10 @@ int main(void)
 	}
 
 	// LOAD MUSIC
-	if (Version == "0.6") {
-		std::string MusicSrc = "resources/" + backgroundMusicSRC;
-		BgMusic = LoadMusicStream(MusicSrc.c_str());
-	}
+	//if (Version == "0.6") {
+	//	std::string MusicSrc = "resources/music/" + backgroundMusicSRC;
+	//	BgMusic = LoadMusicStream(MusicSrc.c_str());
+	//}
 
 
 
@@ -470,12 +469,14 @@ int main(void)
 	// 0.6
 	//---------------------------------------------------------------------------------
 	if (Version == "0.6") {
-		PlayMusicStream(BgMusic);
-
 		float volume = 0.8f;            // Default audio volume [0.0f..1.0f]
 		SetMusicVolume(BgMusic, volume);
 		float pan = 0.0f;               // Default audio pan center [-1.0f..1.0f]
 		SetMusicPan(BgMusic, pan);
+
+		PlayMusicStream(BgMusic);
+
+
 	}
 	//---------------------------------------------------------------------------------
 
@@ -488,8 +489,9 @@ int main(void)
 		int BallMapPosX = ball.position.z - offsetX;
 		int BallMapPosY = ball.position.x - offsetZ;
 
-		if(Version == "0.6")UpdateMusicStream(BgMusic);
 
+
+		if (Version == "0.6") UpdateMusicStream(BgMusic);
 
 		// Draw
 		//----------------------------------------------------------------------------------
@@ -559,7 +561,6 @@ int main(void)
 			// 0.6
 			//---------------------------------------------------------------------------------
 			if (Version == "0.6"){
-				PlayMusicStream(BgMusic);
 				if (!IsMusicStreamPlaying(BgMusic)) PlayMusicStream(BgMusic);
 			}
 			//---------------------------------------------------------------------------------
