@@ -82,7 +82,7 @@ public:
 	virtual void passTime() {
 		timer += 0.5;
 	}
-	
+
 
 	virtual void explode(int offsetX, int offsetZ, char** collisions_map, char** map_map, int levelW, int levelH) {
 
@@ -124,7 +124,7 @@ char** objetcs_map;
 // MUSIC SRC
 std::string backgroundMusicSRC;
 Music BgMusic;
-
+bool hasMusic = false;   // solo pasa a true cuando la musica se ha cargado bien
 
 void HeaderCheck(std::fstream& Level, std::string Reader, char Delimiter, std::string Format, std::string Errormsg, int NumError) {
 	getline(Level, Reader, Delimiter);
@@ -138,7 +138,7 @@ void HeaderCheck(std::fstream& Level, std::string Reader, char Delimiter, std::s
 
 
 // READ ALL TEXTURES
-void CreateTexturesArray(std::fstream& Level, std::map<char, std::string>& textures_files, int& TexturesAmountINT,std::string ReaderTMP, char Delimiter) {
+void CreateTexturesArray(std::fstream& Level, std::map<char, std::string>& textures_files, int& TexturesAmountINT, std::string ReaderTMP, char Delimiter) {
 	for (size_t i = 0; i < TexturesAmountINT; i++) {
 
 		// LEE ID
@@ -165,7 +165,7 @@ void CreateCharPntrPntrArray(char**& ARRAY, int levelH, int levelW) {
 	}
 }
 
-void FillCharPntrPntrArray(std::fstream& Level, std::string ReaderTMP, char**& ARRAY, int levelH, int levelW ,char Delimiter) {
+void FillCharPntrPntrArray(std::fstream& Level, std::string ReaderTMP, char**& ARRAY, int levelH, int levelW, char Delimiter) {
 	// FILL char**
 	for (int i = 0; i < levelH; i++)
 	{
@@ -235,6 +235,21 @@ int READER()
 
 	// JUMP TO THE START OF NEXT LINE
 	getline(Level, tmp);
+
+	if (Version == "0.6") {
+		//READ MUSIC HEADER
+		HeaderCheck(Level, tmp, DELIMITER, MUSIC, "Error 13 = MUSIC Missindicated", 13);
+		// READ MUSIC FILE NAME
+		getline(Level, tmp, DELIMITER);
+		backgroundMusicSRC = tmp;
+		std::cout << backgroundMusicSRC << std::endl;
+		if (backgroundMusicSRC == "") {
+			std::cout << "Error 14 = Music is empty";
+			return 14;
+		}
+		// JUMP TO THE START OF NEXT LINE
+		getline(Level, tmp);
+	}
 
 	// READ TEXTURES HEADER
 	HeaderCheck(Level, tmp, DELIMITER, TEXTURES, "Error 6: TEXTURES Missindicated", 6);
@@ -310,11 +325,14 @@ int READER()
 	// READ COLLISIONS HEADER
 	HeaderCheck(Level, tmp, DELIMITER, COLLISIONS, "Error 11 = COLLISIONS Missindicated", 11);
 
+	// JUMP TO THE START OF NEXT LINE (faltaba: sin esto la primera celda se leia como '\n')
+	getline(Level, tmp);
+
 	// INSTANTIATE COLLISIONS MAP
 	CreateCharPntrPntrArray(collisions_map, level_h, level_w);
 
 	// FILL char**
-	FillCharPntrPntrArray(Level, tmp, collisions_map,level_h, level_w ,DELIMITER);
+	FillCharPntrPntrArray(Level, tmp, collisions_map, level_h, level_w, DELIMITER);
 
 	//PRINT char**
 	PrintArray(collisions_map, level_h, level_w);
@@ -333,19 +351,7 @@ int READER()
 
 	//PRINT char**
 	PrintArray(objetcs_map, level_h, level_w);
-	
-	if (Version == "0.6") {
-		//READ MUSIC HEADER
-		HeaderCheck(Level, tmp, DELIMITER, MUSIC, "Error 13 = MUSIC Missindicated", 13);
-		// JUMP TO THE START OF NEXT LINE
-		getline(Level, tmp, DELIMITER);
-		backgroundMusicSRC = tmp;
-		std::cout << backgroundMusicSRC << std::endl;
-		if (backgroundMusicSRC == "") {
-			std::cout << "Error 14 = Music is empty";
-			return 14;
-		}
-	}
+
 
 	Level.close(); // CLOSE OPENNED FILE
 	return 0;
@@ -356,7 +362,7 @@ void DrawFloorMap(std::map<char, Texture2D>& textures_loaded, char**& _map, int 
 	// DRAW FLOOR MAP
 	for (int i = 0; i < level_h; i++)
 	{
-		for (int j = 0; j < level_w; j++){
+		for (int j = 0; j < level_w; j++) {
 			DrawCubeTexture(textures_loaded[_map[i][j]], { (float)i + offsetX, Depht, (float)j + offsetZ }, 1.0f, 1.0f, 1.0f, WHITE);
 		}
 	}
@@ -365,7 +371,7 @@ void DrawMapMap(std::map<char, Texture2D>& textures_loaded, char**& _map, int le
 	// DRAW FLOOR MAP
 	for (int i = 0; i < level_h; i++)
 	{
-		for (int j = 0; j < level_w; j++){
+		for (int j = 0; j < level_w; j++) {
 			if (_map[j][i] != NO_TEXTURE)
 				DrawCubeTexture(textures_loaded[_map[j][i]], { (float)i + offsetX, Depht, (float)j + offsetZ }, 1.0f, 1.0f, 1.0f, WHITE);
 		}
@@ -379,41 +385,56 @@ int main(void)
 	// LECTOR DE NIVELES BombOS
 	READER();
 
-    // Initialization
-    //--------------------------------------------------------------------------------------
-    const int screenWidth = 800;
-    const int screenHeight = 450;
+	// Initialization
+	//--------------------------------------------------------------------------------------
+	const int screenWidth = 800;
+	const int screenHeight = 450;
 	std::string t = "BomBOs: " + Title;
 
-    InitWindow(screenWidth, screenHeight, t.c_str());
+	InitWindow(screenWidth, screenHeight, t.c_str());
 
-    // Define the camera to look into our 3d world
-    Camera camera = { 0 };
-    camera.position = { 0.0f, 10.0f, 5.0f };     // Camera position
-    camera.target = { 0.0f, 0.0f, 0.0f };          // Camera looking at point
-    camera.up = { 0.0f, 1.0f, 0.0f };              // Camera up vector (rotation towards target)
-    camera.fovy = 45.0f;                                    // Camera field-of-view Y
-    camera.projection = CAMERA_PERSPECTIVE;                 // Camera projection type
+	// Define the camera to look into our 3d world
+	Camera camera = { 0 };
+	camera.position = { 0.0f, 10.0f, 5.0f };     // Camera position
+	camera.target = { 0.0f, 0.0f, 0.0f };          // Camera looking at point
+	camera.up = { 0.0f, 1.0f, 0.0f };              // Camera up vector (rotation towards target)
+	camera.fovy = 45.0f;                                    // Camera field-of-view Y
+	camera.projection = CAMERA_PERSPECTIVE;                 // Camera projection type
 
 	// LOAD TEXTURES
 	for (auto const& it : textures_files) {
 
-		std::string tmpName = "resources/textures" + it.second;
+		std::string tmpName = "resources/" + it.second;
 		const char* tmpSRC = tmpName.c_str();
 
 		Image tmpIMAGE = LoadImage(tmpSRC);
 
 		Texture2D tmpTEXTURE2D = LoadTextureFromImage(tmpIMAGE);
+		UnloadImage(tmpIMAGE);
 
 		textures_loaded.insert({ it.first, tmpTEXTURE2D });
 	}
 
-	// LOAD MUSIC
-	//if (Version == "0.6") {
-	//	std::string MusicSrc = "resources/music/" + backgroundMusicSRC;
-	//	BgMusic = LoadMusicStream(MusicSrc.c_str());
-	//}
+	// VERSION 0.6
+	//---------------------------------------------------------------------------------
+	if (Version == "0.6") {
+		InitAudioDevice();
 
+		std::string MusicSrc = "resources/" + backgroundMusicSRC; 
+		BgMusic = LoadMusicStream(MusicSrc.c_str());
+
+		// IF MUSIC IS VALID AND CAN PLAY
+		if (IsMusicValid(BgMusic)) {        
+			SetMusicVolume(BgMusic, 0.8f);  
+			SetMusicPan(BgMusic, 0.0f);     
+			PlayMusicStream(BgMusic);
+			hasMusic = true;
+		}
+		else {
+			std::cout << "Error 15: Music source could not open " << MusicSrc << std::endl;
+		}
+	}
+	//---------------------------------------------------------------------------------
 
 
 	Vector3 mapPosition = { -16.0f, 0.0f, -8.0f };          // Set model position
@@ -466,20 +487,6 @@ int main(void)
 	int BombMapPosY;
 
 
-	// 0.6
-	//---------------------------------------------------------------------------------
-	if (Version == "0.6") {
-		float volume = 0.8f;            // Default audio volume [0.0f..1.0f]
-		SetMusicVolume(BgMusic, volume);
-		float pan = 0.0f;               // Default audio pan center [-1.0f..1.0f]
-		SetMusicPan(BgMusic, pan);
-
-		PlayMusicStream(BgMusic);
-
-
-	}
-	//---------------------------------------------------------------------------------
-
 	// UPDATE
 	// Main game loop
 	while (!WindowShouldClose())        // Detect window close button or ESC key
@@ -490,8 +497,8 @@ int main(void)
 		int BallMapPosY = ball.position.x - offsetZ;
 
 
-
-		if (Version == "0.6") UpdateMusicStream(BgMusic);
+		// MUSIC UPDATE (raylib hace loop por defecto)
+		if (hasMusic) UpdateMusicStream(BgMusic);
 
 		// Draw
 		//----------------------------------------------------------------------------------
@@ -554,25 +561,17 @@ int main(void)
 			}
 		}
 
-			// DRAW BALL
-			ball.RENDER();
+		// DRAW BALL
+		ball.RENDER();
 
 
-			// 0.6
-			//---------------------------------------------------------------------------------
-			if (Version == "0.6"){
-				if (!IsMusicStreamPlaying(BgMusic)) PlayMusicStream(BgMusic);
-			}
-			//---------------------------------------------------------------------------------
-			
-			
-			DrawGrid(10, 1.0f);        // Draw a grid
+		DrawGrid(10, 1.0f);        // Draw a grid
 
-			EndMode3D();
+		EndMode3D();
 
-			DrawFPS(10, 10);
+		DrawFPS(10, 10);
 
-			DrawText(Title.c_str(), 64, 64, 32, DARKGRAY);
+		DrawText(Title.c_str(), 64, 64, 32, DARKGRAY);
 
 		EndDrawing();
 
@@ -581,9 +580,10 @@ int main(void)
 
 	// De-Initialization
 	//--------------------------------------------------------------------------------------
-
-
-
+	if (hasMusic) {
+		UnloadMusicStream(BgMusic);
+		CloseAudioDevice();
+	}
 
 	CloseWindow();              // Close window and OpenGL context
 	//--------------------------------------------------------------------------------------
