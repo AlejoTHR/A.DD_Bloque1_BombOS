@@ -105,9 +105,6 @@ std::string Title;
 std::string TexturesAmount;
 int TexturesAmountINT;
 
-// MUSIC SRC
-std::string backgroundMusicSRC;
-
 // TEXTURAS
 std::map<char, std::string> textures_files;
 
@@ -124,6 +121,9 @@ char** collisions_map;
 char** objetcs_map;
 
 
+// MUSIC SRC
+std::string backgroundMusicSRC;
+Music BgMusic;
 
 
 void HeaderCheck(std::fstream& Level, std::string Reader, char Delimiter, std::string Format, std::string Errormsg, int NumError) {
@@ -409,9 +409,10 @@ int main(void)
 		textures_loaded.insert({ it.first, tmpTEXTURE2D });
 	}
 
-	Sound bgMusic;
+	// LOAD MUSIC
 	if (Version == "0.6") {
-		bgMusic = LoadSound(backgroundMusicSRC.c_str());
+		std::string MusicSrc = "resources/" + backgroundMusicSRC;
+		BgMusic = LoadMusicStream(MusicSrc.c_str());
 	}
 
 
@@ -469,13 +470,14 @@ int main(void)
 	// 0.6
 	//---------------------------------------------------------------------------------
 	if (Version == "0.6") {
-		PlaySound(bgMusic);
+		PlayMusicStream(BgMusic);
+
+		float volume = 0.8f;            // Default audio volume [0.0f..1.0f]
+		SetMusicVolume(BgMusic, volume);
+		float pan = 0.0f;               // Default audio pan center [-1.0f..1.0f]
+		SetMusicPan(BgMusic, pan);
 	}
 	//---------------------------------------------------------------------------------
-
-
-
-
 
 	// UPDATE
 	// Main game loop
@@ -485,6 +487,9 @@ int main(void)
 		// BALL POSITION INSIDE ARRAY 
 		int BallMapPosX = ball.position.z - offsetX;
 		int BallMapPosY = ball.position.x - offsetZ;
+
+		if(Version == "0.6")UpdateMusicStream(BgMusic);
+
 
 		// Draw
 		//----------------------------------------------------------------------------------
@@ -554,9 +559,8 @@ int main(void)
 			// 0.6
 			//---------------------------------------------------------------------------------
 			if (Version == "0.6"){
-				std::cout << backgroundMusicSRC;
-				PlaySound(bgMusic);
-				if (!IsSoundPlaying(bgMusic)) PlaySound(bgMusic);
+				PlayMusicStream(BgMusic);
+				if (!IsMusicStreamPlaying(BgMusic)) PlayMusicStream(BgMusic);
 			}
 			//---------------------------------------------------------------------------------
 			
@@ -576,6 +580,8 @@ int main(void)
 
 	// De-Initialization
 	//--------------------------------------------------------------------------------------
+
+
 
 
 	CloseWindow();              // Close window and OpenGL context
